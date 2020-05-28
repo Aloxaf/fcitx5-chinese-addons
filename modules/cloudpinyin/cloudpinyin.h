@@ -20,7 +20,7 @@
 #include <fcitx/addoninstance.h>
 #include <fcitx/instance.h>
 
-FCITX_CONFIG_ENUM(CloudPinyinBackend, Google, GoogleCN, Baidu);
+FCITX_CONFIG_ENUM(CloudPinyinBackend, Google, GoogleCN, Baidu, Bing);
 FCITX_CONFIGURATION(
     CloudPinyinConfig,
     fcitx::Option<fcitx::KeyList> toggleKey{

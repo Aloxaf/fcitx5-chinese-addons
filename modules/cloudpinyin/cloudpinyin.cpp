@@ -81,6 +81,34 @@ public:
     }
 };
 
+class BingBackend : public Backend {
+public:
+    void prepareRequest(CurlQueue *queue, const std::string &pinyin) override {
+        std::string url = "https://cn.bing.com/qsonhs.aspx?FORM=IPXIME&mkt=zh-cn&ds=kunlunadvance&o=&count=30&q={_t_:1,_id_:_00000000000000000000000000000000_,_q_:_";
+        std::unique_ptr<char, decltype(&curl_free)> escaped(
+            curl_escape(pinyin.c_str(), pinyin.size()), &curl_free);
+        url += escaped.get();
+        url += "_}";
+        CLOUDPINYIN_DEBUG() << "Request URL: " << url;
+        curl_easy_setopt(queue->curl(), CURLOPT_URL, url.c_str());
+    }
+
+    std::string parseResult(CurlQueue *queue) override {
+        std::string result(queue->result().begin(), queue->result().end());
+        CLOUDPINYIN_DEBUG() << "Request result: " << result;
+        auto start = result.find("Cand=");
+        std::string hanzi;
+        if (start != std::string::npos) {
+            start += strlen("Cand=");
+            auto end = result.find("\",\"Type", start);
+            if (end != std::string::npos && end > start) {
+                hanzi = result.substr(start, end - start);
+            }
+        }
+        return hanzi;
+    }
+};
+
 constexpr int MAX_ERROR = 10;
 constexpr int minInUs = 60000000;
 
@@ -99,6 +127,9 @@ CloudPinyin::CloudPinyin(fcitx::AddonManager *manager)
             "https://www.google.cn/inputtools/request?ime=pinyin&text="));
     backends_.emplace(CloudPinyinBackend::Baidu,
                       std::make_unique<BaiduBackend>());
+    backends_.emplace(
+        CloudPinyinBackend::Bing,
+        std::make_unique<BingBackend>());
 
     resetError_ =
         eventLoop_->addTimeEvent(CLOCK_MONOTONIC, now(CLOCK_MONOTONIC), minInUs,
